@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-bit Pet Rock Game</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+            color: #fff;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #game-canvas {
+            border: 4px solid #fff;
+            image-rendering: pixelated;
+        }
+        button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            font-size: 16px;
+            background-color: #0f0;
+            color: #000;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0c0;
+        }
+        #pellet-count {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="320" height="240"></canvas>
+        <div id="pellet-count">Pellets left: 20</div>
+        <button id="feed-btn">Feed Pet Rock</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true; // Enable antialiasing
+
+        const feedBtn = document.getElementById('feed-btn');
+        const pelletCountDisplay = document.getElementById('pellet-count');
+
+        // Game state
+        let isFeedingMode = false;
+        let foodPellets = [];
+        let ants = [];
+        let bagPosition = { x: 160, y: 40 };
+        let pelletsLeft = 20;
+
+        // Load images (using placeholders)
+        const rockImg = new Image();
+        rockImg.src = 'rock_1.png';
+        const bagImg = new Image();
+        bagImg.src = 'bag_2.png';
+        const pelletImg = new Image();
+        pelletImg.src = 'pellet_1.png';
+        const antImg = new Image();
+        antImg.src = 'ant_1.png';
+
+        function drawGame() {
+            ctx.fillStyle = '#5c94fc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw ground
+            ctx.fillStyle = '#00a800';
+            ctx.fillRect(0, 200, canvas.width, 40);
+
+            // Draw food bag if in feeding mode
+            if (isFeedingMode) {
+                ctx.drawImage(bagImg, bagPosition.x - 40, bagPosition.y - 60, 80, 60);
+            }
+
+            // Draw food pellets
+            foodPellets.forEach(pellet => {
+                ctx.drawImage(pelletImg, pellet.x, pellet.y, 8, 8);
+            });
+
+            // Draw ants
+            ants.forEach(ant => {
+                ctx.drawImage(antImg, ant.x, ant.y, 16, 10);
+                if (ant.carrying) {
+                    ctx.drawImage(pelletImg, ant.x + 4, ant.y - 4, 8, 8);
+                }
+            });
+
+            // Draw rock (last to be on top)
+            ctx.drawImage(rockImg, 120, 160, 80, 60);
+        }
+
+        function updateGame() {
+            // Update food pellets
+            foodPellets.forEach(pellet => {
+                if (pellet.y < 192) {
+                    pellet.y += 2; // Make pellets fall
+                } else if (!pellet.hitGround) {
+                    pellet.hitGround = true;
+                    spawnAnt();
+                }
+            });
+
+            // Update ants
+            ants.forEach(ant => {
+                ant.x += ant.speed;
+                if (ant.x > canvas.width) {
+                    ants = ants.filter(a => a !== ant); // Remove ant when it goes off-screen
+                }
+
+                // Check for collision with food pellets
+                if (!ant.carrying) {
+                    foodPellets = foodPellets.filter(pellet => {
+                        if (Math.abs(ant.x - pellet.x) < 8 && Math.abs(ant.y - pellet.y) < 8 && pellet.hitGround) {
+                            ant.carrying = true;
+                            return false; // Remove pellet if ant collects it
+                        }
+                        return true;
+                    });
+                }
+            });
+        }
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startFeeding() {
+            isFeedingMode = true;
+            updateCursorStyle();
+            canvas.addEventListener('mousemove', updateBagPosition);
+            canvas.addEventListener('click', dropFood);
+        }
+
+        function updateBagPosition(event) {
+            const rect = canvas.getBoundingClientRect();
+            bagPosition.x = event.clientX - rect.left;
+            bagPosition.y = Math.max(10, Math.min(event.clientY - rect.top, 140)); // Limit Y to top of rock
+        }
+
+        function dropFood(event) {
+            if (pelletsLeft > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = Math.max(40, Math.min(event.clientY - rect.top, 240));
+
+                foodPellets.push({ x: x - 4, y: y - 4, hitGround: false });
+                pelletsLeft--;
+                updatePelletCount();
+            }
+
+            if (pelletsLeft === 0) {
+                isFeedingMode = false;
+                updateCursorStyle();
+                canvas.removeEventListener('mousemove', updateBagPosition);
+                canvas.removeEventListener('click', dropFood);
+            }
+        }
+
+        function spawnAnt() {
+            ants.push({
+                x: -16, // Start off-screen to the left
+                y: 192,
+                speed: 1 + Math.random(),
+                carrying: false
+            });
+        }
+
+        function updatePelletCount() {
+            pelletCountDisplay.textContent = `Pellets left: ${pelletsLeft}`;
+        }
+
+        function updateCursorStyle() {
+            canvas.style.cursor = isFeedingMode ? 'none' : 'default';
+        }
+
+        feedBtn.addEventListener('click', startFeeding);
+
+        gameLoop();
+    </script>
+</body>
+</html>
