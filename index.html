@@ -3,103 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-bit Pet Rock Game</title>
+    <title>Ant Feeding Game - Game Boy Style</title>
     <style>
         body {
-            font-family: 'Courier New', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #000;
-            color: #fff;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameboy {
+            width: 300px;
+            height: 480px;
+            background-color: #d0d1d0;
+            border-radius: 10px;
+            border-bottom-right-radius: 100px;
+            padding: 20px;
+            box-shadow: 
+                0 0 10px rgba(0,0,0,0.1),
+                inset 0 0 20px rgba(0,0,0,0.2),
+                5px 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        #gameboy::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+            transform: skew(0, -3deg);
+        }
+        #header {
+            text-align: center;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        #header h1 {
+            font-size: 18px;
+            color: #1e3a8a;
+            margin: 0;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+        }
+        #header p {
+            font-size: 10px;
+            color: #666;
+            margin: 0;
+        }
+        #screen {
+            width: 260px;
+            height: 240px;
+            background-color: #9bbc0f;
+            border: 10px solid #595652;
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        #battery {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #f00;
         }
         #game-container {
-            text-align: center;
-        }
-        #game-canvas {
-            border: 4px solid #fff;
-            image-rendering: pixelated;
-        }
-        button {
-            margin-top: 10px;
-            padding: 5px 10px;
-            font-size: 16px;
-            background-color: #0f0;
-            color: #000;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0c0;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
         }
         #pellet-count {
-            margin-top: 10px;
-            font-size: 18px;
+            font-size: 14px;
+            color: #1e3a8a;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            z-index: 10;
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        #dpad {
+            width: 80px;
+            height: 80px;
+            background-color: #595652;
+            position: relative;
+            border-radius: 50%;
+            box-shadow: 
+                0 5px 10px rgba(0,0,0,0.3),
+                inset 0 -3px 5px rgba(0,0,0,0.5);
+        }
+        #dpad::before, #dpad::after {
+            content: '';
+            position: absolute;
+            background-color: #9c9c9c;
+            box-shadow: inset 0 2px 3px rgba(255,255,255,0.3);
+        }
+        #dpad::before {
+            width: 60px;
+            height: 20px;
+            top: 30px;
+            left: 10px;
+        }
+        #dpad::after {
+            width: 20px;
+            height: 60px;
+            top: 10px;
+            left: 30px;
+        }
+        #button-container {
+            display: flex;
+            justify-content: space-around;
+            flex-grow: 1;
+            margin-left: 20px;
+        }
+        #button-container img {
+            width: 35px;
+            height: 35px;
+            background-color: #cb4124;
+            box-shadow: 1px 1px black;
+            padding: 10px;
+            overflow: visible;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #button-container img:active {
+            box-shadow: 0px 0px black;
+            transform: translate(1px, 1px);
+        }
+        #start-select {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .small-button {
+            width: 40px;
+            height: 15px;
+            background-color: #9c9c9c;
+            border-radius: 10px;
+            transform: rotate(-25deg);
+            font-size: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 
+                0 2px 5px rgba(0,0,0,0.3),
+                inset 0 -1px 2px rgba(0,0,0,0.5);
+        }
+        .game-object {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas" width="320" height="240"></canvas>
-        <div id="pellet-count">Pellets left: 20</div>
-        <button id="feed-btn">Feed Pet Rock</button>
+    <div id="gameboy">
+        <div id="header">
+            <h1>Nintendo GAME BOY&trade;</h1>
+            <p>DOT MATRIX WITH STEREO SOUND</p>
+        </div>
+        <div id="screen">
+            <div id="battery"></div>
+            <div id="game-container">
+                <div id="pellet-count">Pellets left: 20</div>
+            </div>
+        </div>
+        <div id="controls">
+            <div id="dpad"></div>
+            <div id="button-container">
+                <img src="feed_icon.png" alt="Feed" id="feed-btn">
+                <img src="wash_icon.png" alt="Wash" id="wash-btn">
+                <img src="play_icon.png" alt="Play" id="play-btn">
+            </div>
+        </div>
+        <div id="start-select">
+            <div class="small-button">SELECT</div>
+            <div class="small-button">START</div>
+        </div>
     </div>
-
     <script>
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true; // Enable antialiasing
-
+        const gameContainer = document.getElementById('game-container');
         const feedBtn = document.getElementById('feed-btn');
+        const washBtn = document.getElementById('wash-btn');
+        const playBtn = document.getElementById('play-btn');
         const pelletCountDisplay = document.getElementById('pellet-count');
 
         // Game state
         let isFeedingMode = false;
+        let isWashingMode = false;
         let foodPellets = [];
+        let waterDroplets = [];
         let ants = [];
         let bagPosition = { x: 160, y: 40 };
+        let washPosition = { x: 160, y: 40 }; // Position for the wash icon
         let pelletsLeft = 20;
+        let feedingInterval;
+        let washingInterval;
+        let mousePosition = { x: 0, y: 0 };
+        let isMousePressed = false; // Flag to track mouse state
+        let mossPatches = [];
 
-        // Load images (using placeholders)
-        const rockImg = new Image();
-        rockImg.src = 'rock_1.png';
-        const bagImg = new Image();
-        bagImg.src = 'bag_2.png';
-        const pelletImg = new Image();
-        pelletImg.src = 'pellet_1.png';
-        const antImg = new Image();
-        antImg.src = 'ant_1.png';
+        // Load images
+        const rockImg = 'rock_1.png';
+        const bagImg = 'bag_2.png';
+        const pelletImg = 'pellet_1.png';
+        const antImg = 'ant_1.png';
+        const dropletImg = 'droplet_1.png';
+        const washImg = 'wash_1.png'; // Wash icon image
+
+        function createGameObject(src, x, y, width, height) {
+            const obj = document.createElement('div');
+            obj.className = 'game-object';
+            obj.style.backgroundImage = `url(${src})`;
+            obj.style.left = `${x}px`;
+            obj.style.top = `${y}px`;
+            obj.style.width = `${width}px`;
+            obj.style.height = `${height}px`;
+            return obj;
+        }
+
+        
+        function growMoss() {
+            const x = 90 + Math.random() * 50; // Random position on the rock
+            const y = 160 + Math.random() * 40; // Limit y to the top half of the rock
+            mossPatches.push({ x, y });
+        }
 
         function drawGame() {
-            ctx.fillStyle = '#5c94fc';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            gameContainer.innerHTML = '';
+            gameContainer.style.backgroundColor = '#5c94fc';
 
             // Draw ground
-            ctx.fillStyle = '#00a800';
-            ctx.fillRect(0, 200, canvas.width, 40);
+            const ground = document.createElement('div');
+            ground.style.position = 'absolute';
+            ground.style.bottom = '0';
+            ground.style.width = '100%';
+            ground.style.height = '40px';
+            ground.style.backgroundColor = '#00a800';
+            gameContainer.appendChild(ground);
 
             // Draw food bag if in feeding mode
             if (isFeedingMode) {
-                ctx.drawImage(bagImg, bagPosition.x - 40, bagPosition.y - 60, 80, 60);
+                const bag = createGameObject(bagImg, bagPosition.x - 40, bagPosition.y - 50, 80, 60);
+                gameContainer.appendChild(bag);
+            }
+
+            // Draw wash icon if in washing mode
+            if (isWashingMode) {
+                const wash = createGameObject(washImg, washPosition.x - 20, washPosition.y - 20, 40, 40);
+                gameContainer.appendChild(wash);
             }
 
             // Draw food pellets
             foodPellets.forEach(pellet => {
-                ctx.drawImage(pelletImg, pellet.x, pellet.y, 8, 8);
+                const pelletObj = createGameObject(pelletImg, pellet.x, pellet.y, 8, 8);
+                gameContainer.appendChild(pelletObj);
             });
+
 
             // Draw ants
             ants.forEach(ant => {
-                ctx.drawImage(antImg, ant.x, ant.y, 16, 10);
+                const antObj = createGameObject(antImg, ant.x, ant.y, 16, 10);
+                gameContainer.appendChild(antObj);
                 if (ant.carrying) {
-                    ctx.drawImage(pelletImg, ant.x + 4, ant.y - 4, 8, 8);
+                    const carriedPellet = createGameObject(pelletImg, ant.x + 4, ant.y - 4, 8, 8);
+                    gameContainer.appendChild(carriedPellet);
                 }
             });
 
             // Draw rock (last to be on top)
-            ctx.drawImage(rockImg, 120, 160, 80, 60);
+            const rock = createGameObject(rockImg, 90, 160, 80, 80);
+            gameContainer.appendChild(rock);
+
+            
+            // Draw water droplets
+            waterDroplets.forEach(droplet => {
+                const dropletObj = createGameObject(dropletImg, droplet.x, droplet.y, 8, 8);
+                gameContainer.appendChild(dropletObj);
+            });
+
+            // Clean moss with water droplets
+            waterDroplets.forEach(droplet => {
+                mossPatches = mossPatches.filter(moss => {
+                    if (Math.abs(droplet.x - moss.x) < 10 && Math.abs(droplet.y - moss.y) < 10) {
+                        return false; // Remove moss if hit by droplet
+                    }
+                    return true;
+                });
+            });
+
+            // Draw moss patches
+            mossPatches.forEach(moss => {
+                const mossObj = createGameObject('moss.png', moss.x, moss.y, 20, 20);
+                gameContainer.appendChild(mossObj);
+            });
         }
 
         function updateGame() {
@@ -113,10 +325,29 @@
                 }
             });
 
+            // Update water droplets
+            waterDroplets.forEach(droplet => {
+                if (droplet.y < 192) {
+                    droplet.y += 2; // Make droplets fall
+                } else {
+                    waterDroplets = waterDroplets.filter(d => d !== droplet); // Remove droplet when it hits the ground
+                }
+            });
+
+            // Clean moss with water droplets
+            waterDroplets.forEach(droplet => {
+                mossPatches = mossPatches.filter(moss => {
+                    if (Math.abs(droplet.x - moss.x) < 10 && Math.abs(droplet.y - moss.y) < 10) {
+                        return false; // Remove moss if hit by droplet
+                    }
+                    return true;
+                });
+            });
+
             // Update ants
             ants.forEach(ant => {
                 ant.x += ant.speed;
-                if (ant.x > canvas.width) {
+                if (ant.x > gameContainer.clientWidth) {
                     ants = ants.filter(a => a !== ant); // Remove ant when it goes off-screen
                 }
 
@@ -141,34 +372,108 @@
 
         function startFeeding() {
             isFeedingMode = true;
+            isWashingMode = false;
+            pelletsLeft = 20; // Reset pellets count
+            updatePelletCount();
             updateCursorStyle();
-            canvas.addEventListener('mousemove', updateBagPosition);
-            canvas.addEventListener('click', dropFood);
+            gameContainer.addEventListener('mousemove', updateBagPosition);
+            gameContainer.addEventListener('mousedown', handleMouseDown);
+            gameContainer.addEventListener('mouseup', handleMouseUp);
+        }
+
+        function startWashing() {
+            isWashingMode = true;
+            isFeedingMode = false;
+            updateCursorStyle();
+            gameContainer.addEventListener('mousemove', updateWashPosition);
+            gameContainer.addEventListener('mousedown', handleMouseDown);
+            gameContainer.addEventListener('mouseup', handleMouseUp);
         }
 
         function updateBagPosition(event) {
-            const rect = canvas.getBoundingClientRect();
+            const rect = gameContainer.getBoundingClientRect();
             bagPosition.x = event.clientX - rect.left;
             bagPosition.y = Math.max(10, Math.min(event.clientY - rect.top, 140)); // Limit Y to top of rock
+            mousePosition.x = event.clientX - rect.left;
+            mousePosition.y = event.clientY - rect.top;
         }
 
-        function dropFood(event) {
+        function updateWashPosition(event) {
+            const rect = gameContainer.getBoundingClientRect();
+            washPosition.x = event.clientX - rect.left;
+            washPosition.y = Math.max(10, Math.min(event.clientY - rect.top, 140)); // Limit Y to top of rock
+            mousePosition.x = event.clientX - rect.left;
+            mousePosition.y = event.clientY - rect.top;
+        }
+
+        function handleMouseDown() {
+            if (isMousePressed) return; // Prevent multiple intervals
+            isMousePressed = true;
+            if (isFeedingMode) {
+                startDroppingFood();
+            } else if (isWashingMode) {
+                startDroppingWater();
+            }
+        }
+
+        function handleMouseUp() {
+            isMousePressed = false;
+            if (isFeedingMode) {
+                stopDroppingFood();
+            } else if (isWashingMode) {
+                stopDroppingWater();
+            }
+        }
+
+        function startDroppingFood() {
+            if (feedingInterval) return; // Prevent multiple intervals
+            feedingInterval = setInterval(dropFood, 100); // Drop food every 100ms
+        }
+
+        function stopDroppingFood() {
+            clearInterval(feedingInterval);
+            feedingInterval = null;
+            if (pelletsLeft === 0) {
+                isFeedingMode = false;
+                updateCursorStyle();
+                gameContainer.removeEventListener('mousemove', updateBagPosition);
+                gameContainer.removeEventListener('mousedown', handleMouseDown);
+                gameContainer.removeEventListener('mouseup', handleMouseUp);
+            }
+        }
+
+        function dropFood() {
             if (pelletsLeft > 0) {
-                const rect = canvas.getBoundingClientRect();
-                const x = event.clientX - rect.left;
-                const y = Math.max(40, Math.min(event.clientY - rect.top, 240));
+                const x = mousePosition.x;
+                const y = Math.max(40, Math.min(mousePosition.y, 240));
 
                 foodPellets.push({ x: x - 4, y: y - 4, hitGround: false });
                 pelletsLeft--;
                 updatePelletCount();
             }
+        }
 
-            if (pelletsLeft === 0) {
-                isFeedingMode = false;
+        function startDroppingWater() {
+            if (washingInterval) return; // Prevent multiple intervals
+            washingInterval = setInterval(dropWater, 100); // Drop water every 100ms
+        }
+
+        function stopDroppingWater() {
+            clearInterval(washingInterval);
+            washingInterval = null;
+            if (!isWashingMode) {
                 updateCursorStyle();
-                canvas.removeEventListener('mousemove', updateBagPosition);
-                canvas.removeEventListener('click', dropFood);
+                gameContainer.removeEventListener('mousemove', updateWashPosition);
+                gameContainer.removeEventListener('mousedown', handleMouseDown);
+                gameContainer.removeEventListener('mouseup', handleMouseUp);
             }
+        }
+
+        function dropWater() {
+            const x = mousePosition.x + 15;
+            const y = Math.max(40, Math.min(mousePosition.y + 15, 240));
+
+            waterDroplets.push({ x: x - 4, y: y - 4 });
         }
 
         function spawnAnt() {
@@ -185,11 +490,13 @@
         }
 
         function updateCursorStyle() {
-            canvas.style.cursor = isFeedingMode ? 'none' : 'default';
+            gameContainer.style.cursor = isFeedingMode || isWashingMode ? 'none' : 'default';
         }
 
         feedBtn.addEventListener('click', startFeeding);
+        washBtn.addEventListener('click', startWashing);
 
+        setInterval(growMoss, 5000); // Grow moss every 5 seconds
         gameLoop();
     </script>
 </body>
