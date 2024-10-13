@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ant Feeding Game - Game Boy Style</title>
+    <title>Pet Rock</title>   
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         body {
             display: flex;
             justify-content: center;
@@ -56,6 +57,8 @@
             margin: 0;
         }
         #screen {
+            font-family: "Press Start 2P", cursive; /* Add this line */
+            font-size: 14px;
             width: 260px;
             height: 240px;
             background-color: #9bbc0f;
@@ -83,11 +86,19 @@
             overflow: hidden;
         }
         #pellet-count {
-            font-size: 14px;
-            color: #1e3a8a;
+            color: #913906;
             position: absolute;
+            margin-left: 20px;
             top: 5px;
             right: 5px;
+            z-index: 10;
+            display: none;
+        }
+        #score {
+            color: #ffd035;
+            position: absolute;
+            top: 5px;
+            left: 5px;
             z-index: 10;
         }
         #controls {
@@ -169,6 +180,14 @@
             background-size: contain;
             background-repeat: no-repeat;
         }
+        #game-container .football {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-image: url('football.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
     </style>
 </head>
 <body>
@@ -179,8 +198,9 @@
         </div>
         <div id="screen">
             <div id="battery"></div>
+                <div id="pellet-count">20</div>
+                <div id="score">Score: 0</div> <!-- Add this line -->
             <div id="game-container">
-                <div id="pellet-count">Pellets left: 20</div>
             </div>
         </div>
         <div id="controls">
@@ -202,6 +222,9 @@
         const washBtn = document.getElementById('wash-btn');
         const playBtn = document.getElementById('play-btn');
         const pelletCountDisplay = document.getElementById('pellet-count');
+        let coins = [];
+        let score = 0;
+        const scoreDisplay = document.getElementById('score');
 
         // Game state
         let isFeedingMode = false;
@@ -217,6 +240,10 @@
         let mousePosition = { x: 0, y: 0 };
         let isMousePressed = false; // Flag to track mouse state
         let mossPatches = [];
+        let football = { x: 130, y: 120, vx: 2, vy: 2 };
+        let isPlayingMode = false;
+        let isFootballClicked = false; // Global variable to track football click state
+
 
         // Load images
         const rockImg = 'rock_1.png';
@@ -237,8 +264,51 @@
             return obj;
         }
 
-        
+        function generateCoin() {
+            if (coins.length >= 5) return; // Limit the number of coins
+            const x = Math.random() * 220;
+            const y = Math.random() * 170;
+            coins.push({ x, y });
+        }
+
+        function moveFootball() {
+            if (!isFootballClicked) { 
+                football.x -= football.vx;
+                football.y += football.vy;
+
+                // Apply gravity
+                football.vy += 0.2;
+
+                // Bounce off walls
+                if (football.x <= 0 || football.x >= 220) {
+                    football.vx *= -1;
+                    football.x = football.x <= 0 ? 0 : 220;
+                }
+
+                // Bounce off ground
+                if (football.y >= 170) {
+                    football.vy *= -0.2; // Increase bounce strength
+                    football.y = 170; // Prevent sinking below ground
+                    football.vx *= 0.9; // Apply friction when hitting the ground
+                }
+
+                // Apply air resistance
+                football.vx *= 0.99;
+                football.vy *= 0.99;
+
+                // Stop the ball if speed is below threshold
+                const speedThreshold = 0.1;
+                if (Math.abs(football.vx) < speedThreshold) football.vx = 0;
+                if (Math.abs(football.vy) < speedThreshold && football.y >= 165) football.vy = 0;
+
+                // Update rotation based on horizontal velocity
+                if (!football.rotation) football.rotation = 0;
+                football.rotation -= football.vx * 5; // Adjust rotation speed as needed
+            }
+        }
+
         function growMoss() {
+            if (mossPatches.length >= 5) return; // Limit the number of moss patches
             const x = 90 + Math.random() * 50; // Random position on the rock
             const y = 160 + Math.random() * 40; // Limit y to the top half of the rock
             mossPatches.push({ x, y });
@@ -247,7 +317,7 @@
         function drawGame() {
             gameContainer.innerHTML = '';
             gameContainer.style.backgroundColor = '#5c94fc';
-
+            
             // Draw ground
             const ground = document.createElement('div');
             ground.style.position = 'absolute';
@@ -257,16 +327,52 @@
             ground.style.backgroundColor = '#00a800';
             gameContainer.appendChild(ground);
 
+            // Draw football if in play mode
+            if (isPlayingMode) {
+                const footballObj = createGameObject('football.png', football.x, football.y, 40, 40);
+                footballObj.style.transform = `rotate(${football.rotation}deg)`;
+                footballObj.addEventListener('mousedown', handleFootballMouseDown);
+                footballObj.addEventListener('mouseup', handleFootballMouseUp);
+                footballObj.addEventListener('touchstart', handleFootballMouseDown);
+                footballObj.addEventListener('touchend', handleFootballMouseUp);
+                gameContainer.appendChild(footballObj);
+                scoreDisplay.style.display = 'block'; // Show score when football is displayed
+
+                // Draw coins
+                coins.forEach(coin => {
+                    const coinObj = createGameObject('coin.gif', coin.x, coin.y, 20, 20);
+                    gameContainer.appendChild(coinObj);
+                });
+            } else {
+                scoreDisplay.style.display = 'none'; // Hide score when football is not displayed
+            }
+
+            // Draw coins
+            coins.forEach(coin => {
+                const coinObj = createGameObject('coin.gif', coin.x, coin.y, 20, 20);
+                gameContainer.appendChild(coinObj);
+            });
+
             // Draw food bag if in feeding mode
             if (isFeedingMode) {
                 const bag = createGameObject(bagImg, bagPosition.x - 40, bagPosition.y - 50, 80, 60);
+                bag.style.pointerEvents = 'none'; // Prevent bag from blocking mouse events
                 gameContainer.appendChild(bag);
+                pelletCountDisplay.style.display = 'block'; // Show pellet count when bag is displayed
+            } else {
+                pelletCountDisplay.style.display = 'none'; // Hide pellet count when bag is not displayed
             }
 
-            // Draw wash icon if in washing mode
+            // Draw moss patches if in washing mode
             if (isWashingMode) {
                 const wash = createGameObject(washImg, washPosition.x - 20, washPosition.y - 20, 40, 40);
+                wash.style.pointerEvents = 'none'; // Prevent wash icon from blocking mouse events
                 gameContainer.appendChild(wash);
+                mossPatches.forEach(moss => {
+                    const mossObj = createGameObject('moss.png', moss.x, moss.y, 20, 20);
+                    mossObj.style.pointerEvents = 'none'; // Prevent moss from blocking mouse events
+                    gameContainer.appendChild(mossObj);
+                });
             }
 
             // Draw food pellets
@@ -274,7 +380,6 @@
                 const pelletObj = createGameObject(pelletImg, pellet.x, pellet.y, 8, 8);
                 gameContainer.appendChild(pelletObj);
             });
-
 
             // Draw ants
             ants.forEach(ant => {
@@ -288,9 +393,9 @@
 
             // Draw rock (last to be on top)
             const rock = createGameObject(rockImg, 90, 160, 80, 80);
+            rock.style.pointerEvents = 'none'; // Prevent rock from blocking mouse events
             gameContainer.appendChild(rock);
 
-            
             // Draw water droplets
             waterDroplets.forEach(droplet => {
                 const dropletObj = createGameObject(dropletImg, droplet.x, droplet.y, 8, 8);
@@ -310,10 +415,35 @@
             // Draw moss patches
             mossPatches.forEach(moss => {
                 const mossObj = createGameObject('moss.png', moss.x, moss.y, 20, 20);
+                mossObj.style.pointerEvents = 'none'; // Prevent moss from blocking mouse events
                 gameContainer.appendChild(mossObj);
             });
         }
 
+        
+        function handleFootballMouseDown(event) {
+            event.stopPropagation(); // Prevent event from bubbling up
+            isFootballClicked = true;
+            const rect = gameContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+
+            // Calculate horizontal direction
+            const dx = football.x + 20 - clickX; // Add 20 to account for football's center
+
+            // Set a fixed upward velocity
+            const upwardVelocity = -5; // Adjust this value to change the bounce height
+
+            // Set horizontal velocity based on click position
+            const horizontalVelocity = (dx > 0) ? -3 : 3; // Adjust this value to change the horizontal speed
+
+            football.vx = horizontalVelocity;
+            football.vy = upwardVelocity;
+        }
+
+        function handleFootballMouseUp() {
+            isFootballClicked = false;
+        }
+        
         function updateGame() {
             // Update food pellets
             foodPellets.forEach(pellet => {
@@ -358,55 +488,128 @@
                             ant.carrying = true;
                             return false; // Remove pellet if ant collects it
                         }
-                        return true;
-                    });
+                    true;
+                    return true});
                 }
+            });
+            
+            // Check for collision with coins
+            coins = coins.filter(coin => {
+                if (Math.abs(football.x - coin.x) < 20 && Math.abs(football.y - coin.y) < 20) {
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    return false; // Remove coin if collected
+                }
+                return true;
             });
         }
 
         function gameLoop() {
             updateGame();
             drawGame();
+            moveFootball();
             requestAnimationFrame(gameLoop);
         }
 
         function startFeeding() {
             isFeedingMode = true;
             isWashingMode = false;
-            pelletsLeft = 20; // Reset pellets count
+            isPlayingMode = false;
             updatePelletCount();
             updateCursorStyle();
             gameContainer.addEventListener('mousemove', updateBagPosition);
             gameContainer.addEventListener('mousedown', handleMouseDown);
             gameContainer.addEventListener('mouseup', handleMouseUp);
+            gameContainer.addEventListener('touchmove', updateBagPosition);
+            gameContainer.addEventListener('touchstart', handleMouseDown);
+            gameContainer.addEventListener('touchend', handleMouseUp);
         }
 
         function startWashing() {
             isWashingMode = true;
             isFeedingMode = false;
+            isPlayingMode = false;
             updateCursorStyle();
             gameContainer.addEventListener('mousemove', updateWashPosition);
             gameContainer.addEventListener('mousedown', handleMouseDown);
             gameContainer.addEventListener('mouseup', handleMouseUp);
+            gameContainer.addEventListener('touchmove', updateWashPosition);
+            gameContainer.addEventListener('touchstart', handleMouseDown);
+            gameContainer.addEventListener('touchend', handleMouseUp);
+        }
+
+        function startPlaying() {
+            isFeedingMode = false;
+            isWashingMode = false;
+            isPlayingMode = true;
+            updateCursorStyle();
+            gameContainer.removeEventListener('mousemove', updateBagPosition);
+            gameContainer.removeEventListener('mousemove', updateWashPosition);
+            gameContainer.removeEventListener('mousedown', handleMouseDown);
+            gameContainer.removeEventListener('mouseup', handleMouseUp);
+            gameContainer.removeEventListener('touchmove', updateBagPosition);
+            gameContainer.removeEventListener('touchmove', updateWashPosition);
+            gameContainer.removeEventListener('touchstart', handleMouseDown);
+            gameContainer.removeEventListener('touchend', handleMouseUp);
+            // Remove the global event listener for football click
+            gameContainer.removeEventListener('mousedown', handleFootballClick);
+            gameContainer.removeEventListener('touchstart', handleFootballClick);
         }
 
         function updateBagPosition(event) {
+            let clientX, clientY;
+            if (event.type.startsWith('touch')) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            console.log(`Event Type: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+            
             const rect = gameContainer.getBoundingClientRect();
-            bagPosition.x = event.clientX - rect.left;
-            bagPosition.y = Math.max(10, Math.min(event.clientY - rect.top, 140)); // Limit Y to top of rock
-            mousePosition.x = event.clientX - rect.left;
-            mousePosition.y = event.clientY - rect.top;
+            bagPosition.x = clientX - rect.left;
+            bagPosition.y = Math.max(10, Math.min(clientY - rect.top, 140)); // Limit Y to top of rock
+            mousePosition.x = clientX - rect.left;
+            mousePosition.y = clientY - rect.top;
+
+            // Update the position of the pellet count display
+            const pelletCountDisplay = document.getElementById('pellet-count');
+            pelletCountDisplay.style.display = 'block';
+            pelletCountDisplay.style.left = `${bagPosition.x + 20}px`; // Adjust as needed
+            pelletCountDisplay.style.top = `${bagPosition.y - 20}px`; // Adjust as needed
         }
 
         function updateWashPosition(event) {
+            let clientX, clientY;
+            if (event.type.startsWith('touch')) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            console.log(`Event Type: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+            
             const rect = gameContainer.getBoundingClientRect();
-            washPosition.x = event.clientX - rect.left;
-            washPosition.y = Math.max(10, Math.min(event.clientY - rect.top, 140)); // Limit Y to top of rock
-            mousePosition.x = event.clientX - rect.left;
-            mousePosition.y = event.clientY - rect.top;
+            washPosition.x = clientX - rect.left;
+            washPosition.y = Math.max(10, Math.min(clientY - rect.top, 140)); // Limit Y to top of rock
+            mousePosition.x = clientX - rect.left;
+            mousePosition.y = clientY - rect.top;
         }
 
-        function handleMouseDown() {
+        function handleMouseDown(event) {
+            let clientX, clientY;
+            if (event.type.startsWith('touch')) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            console.log(`Mouse Down Event: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+    
+            event.preventDefault(); // Prevent default touch behavior
             if (isMousePressed) return; // Prevent multiple intervals
             isMousePressed = true;
             if (isFeedingMode) {
@@ -416,7 +619,18 @@
             }
         }
 
-        function handleMouseUp() {
+        function handleMouseUp(event) {
+            let clientX, clientY;
+            if (event.type.startsWith('touch')) {
+                clientX = event.changedTouches[0].clientX;
+                clientY = event.changedTouches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            console.log(`Mouse Up Event: ${event.type}, X: ${clientX}, Y: ${clientY}`);
+    
+            event.preventDefault(); // Prevent default touch behavior
             isMousePressed = false;
             if (isFeedingMode) {
                 stopDroppingFood();
@@ -424,6 +638,7 @@
                 stopDroppingWater();
             }
         }
+
 
         function startDroppingFood() {
             if (feedingInterval) return; // Prevent multiple intervals
@@ -486,7 +701,7 @@
         }
 
         function updatePelletCount() {
-            pelletCountDisplay.textContent = `Pellets left: ${pelletsLeft}`;
+            pelletCountDisplay.textContent = `${pelletsLeft}`;
         }
 
         function updateCursorStyle() {
@@ -495,9 +710,38 @@
 
         feedBtn.addEventListener('click', startFeeding);
         washBtn.addEventListener('click', startWashing);
+        playBtn.addEventListener('click', startPlaying);
 
-        setInterval(growMoss, 5000); // Grow moss every 5 seconds
+        setInterval(() => {
+            if (isWashingMode) {
+                growMoss();
+            }
+        }, 5000); // Grow moss every 5 seconds
+
+        setInterval(() => {
+            if (isPlayingMode) {
+                generateCoin();
+            }
+        }, 5000); // Generate a coin every 5 seconds
         gameLoop();
+
+        function handleFootballClick(event) {
+            const rect = gameContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+        
+            // Calculate bounce direction
+            const dx = football.x - clickX;
+            const dy = football.y - clickY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+        
+            // Set a fixed horizontal velocity based on click position
+            football.vx = (dx > 0) ? -5 : 5; // Adjust the value as needed for the desired speed
+        
+            // Keep the existing y-direction logic
+            football.vy = (dy / distance) * 5;
+        }
+
     </script>
 </body>
 </html>
